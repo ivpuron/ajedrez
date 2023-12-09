@@ -5,14 +5,24 @@ import java.awt.event.*;
 import java.awt.image.BufferedImage;
 import javax.swing.*;
 import javax.swing.border.*;
+import java.io.Serializable;
 import java.net.URL;
+import java.util.ArrayList;
+import java.util.Arrays;
 import javax.imageio.ImageIO;
 
 
 
-public class ChessGUI {
+public class ChessGUI implements Serializable {
+    private static int contador = 0;
+
+    public static int getContador() {
+        return contador;
+    }
+
     private static JFrame frame;
     private JButton pieza_seleccionada = null;
+    public JButton getPieza_seleccionada(){return this.pieza_seleccionada;}
 
     private final JPanel gui = new JPanel(new BorderLayout(3, 3));
     private JButton[][] chessBoardSquares = new JButton[8][8];
@@ -27,11 +37,17 @@ public class ChessGUI {
             ROOK, KNIGHT, BISHOP, KING, QUEEN, BISHOP, KNIGHT, ROOK
     };
     public static final int BLACK = 0, WHITE = 1;
+    private ArrayList<Icon> iconosBlancos = new ArrayList<>();
+    private ArrayList<Icon> iconosNegros = new ArrayList<>();
+    private boolean finalizada = false;
+    public boolean getFinalizada(){return this.finalizada;}
 
-    ChessGUI() {
+    public ChessGUI() {
         initializeGui();
         setupNewGame();
     }
+
+
 
     public final void initializeGui() {
         // create the images for the chess pieces
@@ -42,7 +58,7 @@ public class ChessGUI {
         JToolBar tools = new JToolBar();
         tools.setFloatable(false);
         gui.add(tools, BorderLayout.PAGE_START);
-        Action newGameAction = new AbstractAction("New") {
+        /*Action newGameAction = new AbstractAction("New") {
 
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -50,7 +66,7 @@ public class ChessGUI {
             }
         };
         tools.add(newGameAction);
-        tools.addSeparator();
+        tools.addSeparator();*/
         tools.add(new JButton("Rendirse")); // TODO - add functionality!
         tools.addSeparator();
         tools.add(message);
@@ -125,12 +141,20 @@ public class ChessGUI {
                     public void btnHandler(){
                         if(pieza_seleccionada==null){
                             if(b.getIcon()!=null){
-                                System.out.println("Hay pieza");
                                 pieza_seleccionada=b;
                             }
                         }else{
-                                System.out.println("Muevo o como");
-                                movePiece(pieza_seleccionada,b);
+                            if(contador%2==0 && isWhite(pieza_seleccionada)){
+                                if(movePiece(pieza_seleccionada,b)){
+                                    contador++;
+                                    message.setText("Turno de negras!");
+                                }
+                            }else if(contador%2==1 && isBlack(pieza_seleccionada)){
+                                if(movePiece(pieza_seleccionada,b)){
+                                    contador++;
+                                    message.setText("Turno de blancas!");
+                                }
+                            }
                             pieza_seleccionada=null;
                         }
 
@@ -191,33 +215,112 @@ public class ChessGUI {
      * Initializes the icons of the initial chess board piece places
      */
     private final void setupNewGame() {
-        message.setText("Make your move!");
+        message.setText("Turno de blancas!");
         // set up the black pieces
         for (int ii = 0; ii < STARTING_ROW.length; ii++) {
             chessBoardSquares[ii][0].setIcon(new ImageIcon(
                     chessPieceImages[BLACK][STARTING_ROW[ii]]));
+            iconosNegros.add(chessBoardSquares[ii][0].getIcon());
         }
         for (int ii = 0; ii < STARTING_ROW.length; ii++) {
             chessBoardSquares[ii][1].setIcon(new ImageIcon(
                     chessPieceImages[BLACK][PAWN]));
+            iconosNegros.add(chessBoardSquares[ii][1].getIcon());
         }
+
+
         // set up the white pieces
         for (int ii = 0; ii < STARTING_ROW.length; ii++) {
             chessBoardSquares[ii][6].setIcon(new ImageIcon(
                     chessPieceImages[WHITE][PAWN]));
+            iconosBlancos.add(chessBoardSquares[ii][6].getIcon());
         }
         for (int ii = 0; ii < STARTING_ROW.length; ii++) {
             chessBoardSquares[ii][7].setIcon(new ImageIcon(
                     chessPieceImages[WHITE][STARTING_ROW[ii]]));
+            iconosBlancos.add(chessBoardSquares[ii][7].getIcon());
         }
+        iconosBlancos.add(chessBoardSquares[0][6].getIcon());
     }
 
 
 
-    private final void movePiece(JButton origen, JButton destino){
+    private boolean movePiece(JButton origen, JButton destino){
+        if(!movimientoCorrecto(origen,destino)){return false;}
         destino.setIcon(origen.getIcon());
         origen.setIcon(null);
         frame.pack();
+        return true;
+    }
+
+
+    private boolean movimientoCorrecto(JButton origen, JButton destino) {
+        if(origen.getIcon().equals(chessPieceImages[WHITE][PAWN])){
+            return movimientoPeonBlanco(origen,destino);
+        }else if(origen.getIcon().equals(chessPieceImages[WHITE][QUEEN])){
+            //return movimientoReina(JButton origen, JButton destino)
+        }
+        return true;
+    }
+
+    private boolean movimientoPeonBlanco(JButton origen, JButton destino) {
+        int x=-1,y=-1,m=-1,n=-1;
+        for(int i = 0 ; i<8;i++){
+            for(int j = 0 ; j<8; j++){
+                if(chessBoardSquares[i][j].equals(origen)){
+                    x=i;
+                    y=j;
+                }
+            }
+        }
+        for(int i = 0 ; i<8;i++){
+            for(int j = 0 ; j<8; j++){
+                if(chessBoardSquares[i][j].equals(destino)){
+                    m=i;
+                    n=j;
+                }
+            }
+        }
+        if(destino.getIcon()==null){
+            if(x!=m){return false;}
+            else{
+                if(y==1){return n==2 || n==3;}
+                else{
+                    return n-y==1;
+                }
+            }
+        }else{
+            return n-y==1 && (x-m==1 || x-m==-1);
+        }
+
+    }
+
+    public boolean isWhite(JButton casilla) {
+        Icon icono = casilla.getIcon();
+        if (icono != null && iconosBlancos.contains(icono)) {
+            return true;
+        }
+        return false;
+    }
+
+    public boolean isBlack(JButton casilla){
+        Icon icono = casilla.getIcon();
+        if (icono != null && iconosNegros.contains(icono)) {
+            return true;
+        }
+        return false;
+    }
+
+    public boolean isEmpty(JButton casilla){
+        return casilla.getIcon()==null;
+    }
+
+    public boolean check(){
+        return false;
+    }
+
+    private boolean checkMate() {
+        return false;
     }
 
     public static void main(String[] args) {
